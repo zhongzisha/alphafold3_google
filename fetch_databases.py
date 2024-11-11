@@ -15,7 +15,6 @@ them. Make sure both are installed on your system before running this script.
 """
 
 import argparse
-from collections.abc import Sequence
 import concurrent.futures
 import functools
 import os
@@ -63,7 +62,8 @@ def download_and_decompress(
       check=True,
       stdout=subprocess.PIPE,
       stderr=subprocess.PIPE,
-      text=True,
+      # Same as text=True in Python 3.7+, used for backwards compatibility.
+      universal_newlines=True,
   )
   print(
       f'FINISHED downloading {filename} from {bucket_path} to'
@@ -81,7 +81,7 @@ def download_and_decompress(
   print(f'FINISHED decompressing of {filename}')
 
 
-def main(argv: Sequence[str] = ('',)) -> None:
+def main(argv=('',)) -> None:
   """Main function."""
   parser = argparse.ArgumentParser(description='Downloads AlphaFold databases.')
   parser.add_argument(
