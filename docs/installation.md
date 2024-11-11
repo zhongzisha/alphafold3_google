@@ -56,11 +56,11 @@ We verified the following installation steps from this point.
 
 ## Installing Docker
 
-The instruction are for rootless Docker.
+These instructions are for rootless Docker.
 
 ### Installing Docker on Host
 
-Note these instructions only apply to Ubuntu images, see above.
+Note these instructions only apply to Ubuntu 22.04 LTS images, see above.
 
 Add Docker's official GPG key. Official Docker instructions are
 [here](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository).
