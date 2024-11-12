@@ -70,8 +70,8 @@ them for numerical accuracy and throughput efficiency:
 
 #### NVIDIA A100 (40 GB)
 
-AlphaFold 3 can run on a single NVIDIA A100 (40 GB) with the following
-configuration changes:
+AlphaFold 3 can run on inputs of size up to 4,352 tokens on a single NVIDIA A100
+(40 GB) with the following configuration changes:
 
 1.  Enabling [unified memory](#unified-memory).
 1.  Adjusting `pair_transition_shard_spec` in `model_config.py`:
