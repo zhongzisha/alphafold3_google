@@ -321,7 +321,7 @@ docker push localhost:5000/alphafold3
 Then build the Singularity container:
 
 ```sh
-SINGULARITY_NOHTTPS=1 singularity build alphafold3.simg docker://localhost:5000/alphafold3:latest
+SINGULARITY_NOHTTPS=1 singularity build alphafold3.sif docker://localhost:5000/alphafold3:latest
 ```
 
 You can confirm your build by starting a shell and inspecting the environment.
@@ -329,24 +329,25 @@ For example, you may want to ensure the Singularity image can access your GPU.
 You may want to restart your computer if you have issues with this.
 
 ```sh
-singularity exec --nv alphafold3.simg sh -c 'nvidia-smi'
+singularity exec --nv alphafold3.sif sh -c 'nvidia-smi'
 ```
 
 You can now run AlphaFold 3!
 
 ```sh
-singularity exec --nv alphafold3.simg <<args>>
+singularity exec --nv alphafold3.sif <<args>>
 ```
 
 For example:
 
 ```sh
 singularity exec \
-     --nv alphafold3.simg \
+     --nv \
      --bind $HOME/af_input:/root/af_input \
      --bind $HOME/af_output:/root/af_output \
      --bind <MODEL_PARAMETERS_DIR>:/root/models \
      --bind <DATABASES_DIR>:/root/public_databases \
+     alphafold3.sif \
 python alphafold3/run_alphafold.py \
      --json_path=/root/af_input/fold_input.json \
      --model_dir=/root/models \
