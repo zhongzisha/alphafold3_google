@@ -851,10 +851,11 @@ def package_template_features(
 
 def _resolve_path(path: os.PathLike[str] | str) -> str:
   """Resolves path for data dep paths, stringifies otherwise."""
-  try:
-    # Data dependency paths: db baked into the binary.
-    return resources.filename(path)
-  except (FileNotFoundError, ValueError):
+  # Data dependency paths: db baked into the binary.
+  resolved_path = resources.filename(path)
+  if os.path.exists(resolved_path):
+    return resolved_path
+  else:
     # Other paths, e.g. local.
     return str(path)
 
