@@ -73,6 +73,16 @@ python run_alphafold.py \
     --output_dir=/root/af_output
 ```
 
+There are various flags that you can pass to the `run_alphafold.py` command, to
+list them all run `python run_alphafold.py --help`. Two fundamental flags that
+control which parts AlphaFold 3 will run are:
+
+*   `--run_data_pipeline` (defaults to `true`): whether to run the data
+    pipeline, i.e. genetic and template search. This part is CPU-only, time
+    consuming and could be run on a machine without a GPU.
+*   `--run_inference` (defaults to `true`): whether to run the inference. This
+    part requires a GPU.
+
 ## AlphaFold 3 Input
 
 See the [input documentation](docs/input.md).
