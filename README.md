@@ -67,7 +67,7 @@ docker run -it \
     --volume <DATABASES_DIR>:/root/public_databases \
     --gpus all \
     alphafold3 \
-python run_alphafold.py \
+    python run_alphafold.py \
     --json_path=/root/af_input/fold_input.json \
     --model_dir=/root/models \
     --output_dir=/root/af_output

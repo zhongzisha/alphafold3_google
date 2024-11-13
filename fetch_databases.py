@@ -18,6 +18,7 @@ import argparse
 import concurrent.futures
 import functools
 import os
+import pathlib
 import subprocess
 import sys
 
@@ -34,15 +35,15 @@ DATABASE_FILES = (
     'uniref90_2022_05.fa.zst',
 )
 
-BUCKET_PATH = 'https://storage.googleapis.com/alphafold-databases/v3.0'
+BUCKET_URL = 'https://storage.googleapis.com/alphafold-databases/v3.0'
 
 
 def download_and_decompress(
-    filename: str, *, bucket_path: str, download_destination: str
+    filename: str, *, bucket_url: str, download_destination: pathlib.Path
 ) -> None:
   """Downloads and decompresses a ztsd-compressed file."""
   print(
-      f'STARTING download {filename} from {bucket_path} to'
+      f'STARTING download {filename} from {bucket_url} to'
       f' {download_destination}'
   )
   # Continue (`continue-at -`) for resumability of a partially downloaded file.
@@ -55,8 +56,8 @@ def download_and_decompress(
           'curl',
           '--progress-bar',
           *('--continue-at', '-'),
-          *('--output', f'{download_destination}/{filename}'),
-          f'{bucket_path}/{filename}',
+          *('--output', str(download_destination / filename)),
+          f'{bucket_url}/{filename}',
           *('--stderr', '/dev/stdout'),
       ),
       check=True,
@@ -66,7 +67,7 @@ def download_and_decompress(
       universal_newlines=True,
   )
   print(
-      f'FINISHED downloading {filename} from {bucket_path} to'
+      f'FINISHED downloading {filename} from {bucket_url} to'
       f' {download_destination}.'
   )
 
@@ -91,15 +92,18 @@ def main(argv=('',)) -> None:
   )
   args = parser.parse_args(argv)
 
-  if os.geteuid() != 0 and args.download_destination.startswith('/srv'):
-    raise ValueError(
-        'You must run this script as root to be able to write to /srv.'
-    )
+  destination = pathlib.Path(os.path.expanduser(args.download_destination))
 
-  destination = os.path.expanduser(args.download_destination)
-
-  print(f'Downloading all data to: {destination}')
-  os.makedirs(destination, exist_ok=True)
+  print(f'Downloading all data to: {str(destination)}')
+  try:
+    destination.mkdir(exist_ok=True)
+    if not os.access(destination, os.W_OK):
+      raise PermissionError()
+  except PermissionError as e:
+    raise PermissionError(
+        'You do not have write permissions to the destination directory'
+        f' {destination}.'
+    ) from e
 
   # Download each of the files and decompress them in parallel.
   with concurrent.futures.ThreadPoolExecutor(
@@ -109,7 +113,7 @@ def main(argv=('',)) -> None:
         pool.map(
             functools.partial(
                 download_and_decompress,
-                bucket_path=BUCKET_PATH,
+                bucket_url=BUCKET_URL,
                 download_destination=destination,
             ),
             DATABASE_FILES,
@@ -118,7 +122,7 @@ def main(argv=('',)) -> None:
 
   # Delete all zstd files at the end (after successfully decompressing them).
   for filename in DATABASE_FILES:
-    os.remove(f'{args.download_destination}/{filename}')
+    os.remove(destination / filename)
 
   print('All databases have been downloaded and decompressed.')
 

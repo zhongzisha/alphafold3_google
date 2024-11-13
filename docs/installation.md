@@ -270,7 +270,7 @@ docker run -it \
     --volume <DATABASES_DIR>:/root/public_databases \
     --gpus all \
     alphafold3 \
-python run_alphafold.py \
+    python run_alphafold.py \
     --json_path=/root/af_input/fold_input.json \
     --model_dir=/root/models \
     --output_dir=/root/af_output
@@ -348,7 +348,7 @@ singularity exec \
      --bind <MODEL_PARAMETERS_DIR>:/root/models \
      --bind <DATABASES_DIR>:/root/public_databases \
      alphafold3.sif \
-python alphafold3/run_alphafold.py \
+     python alphafold3/run_alphafold.py \
      --json_path=/root/af_input/fold_input.json \
      --model_dir=/root/models \
      --db_dir=/root/public_databases \
