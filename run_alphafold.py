@@ -31,7 +31,7 @@ import string
 import textwrap
 import time
 import typing
-from typing import Final, Protocol, Self, TypeVar, overload
+from typing import Protocol, Self, TypeVar, overload
 
 from absl import app
 from absl import flags
@@ -203,27 +203,23 @@ _NHMMER_N_CPU = flags.DEFINE_integer(
     ' beyond 8 CPUs provides very little additional speedup.',
 )
 
-# Compilation cache
+# Compilation cache.
 _JAX_COMPILATION_CACHE_DIR = flags.DEFINE_string(
     'jax_compilation_cache_dir',
     None,
     'Path to a directory for the JAX compilation cache.',
 )
 
-_BUCKETS: Final[tuple[int, ...]] = (
-    256,
-    512,
-    768,
-    1024,
-    1280,
-    1536,
-    2048,
-    2560,
-    3072,
-    3584,
-    4096,
-    4608,
-    5120,
+# Compilation buckets.
+_BUCKETS = flags.DEFINE_list(
+    'buckets',
+    # pyformat: disable
+    ['256', '512', '768', '1024', '1280', '1536', '2048', '2560', '3072',
+     '3584', '4096', '4608', '5120'],
+    # pyformat: enable
+    'Strictly increasing order of token sizes for which to cache compilations.'
+    ' For any input with more tokens than the largest bucket size, a new bucket'
+    ' is created for exactly that number of tokens.',
 )
 
 
@@ -665,7 +661,7 @@ def main(_):
         data_pipeline_config=data_pipeline_config,
         model_runner=model_runner,
         output_dir=os.path.join(_OUTPUT_DIR.value, fold_input.sanitised_name()),
-        buckets=_BUCKETS,
+        buckets=tuple(int(bucket) for bucket in _BUCKETS.value),
     )
 
   print(f'Done processing {len(fold_inputs)} fold inputs.')

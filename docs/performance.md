@@ -94,6 +94,41 @@ V100 using the flag `--flash_attention_implementation=xla` in
 `run_alphafold.py`, this configuration has not been tested for numerical
 accuracy or throughput efficiency, so please proceed with caution.
 
+## Compilation Buckets
+
+To avoid excessive re-compilation of the model, AlphaFold 3 implements
+compilation buckets: ranges of input sizes using a single compilation of the
+model.
+
+When featurising an input, AlphaFold 3 determines the smallest bucket the input
+fits into, then adds any necessary padding. This may avoid re-compiling the
+model when running inference on the input if it belongs to the same bucket as a
+previously processed input.
+
+The configuration of bucket sizes involves a trade-off: more buckets leads to
+more re-compilations of the model, but less padding.
+
+By default, the largest bucket size is 5,120 tokens. Processing inputs larger
+than this maximum bucket size triggers the creation of a new bucket for exactly
+that input size, and a re-compilation of the model. In this case, you may wish
+to redefine the compilation bucket sizes via the `--buckets` flag in
+`run_alphafold.py` to add additional larger bucket sizes. For example, suppose
+you are running inference on inputs with token sizes: `5132, 5280, 5342`. Using
+the default bucket sizes configured in `run_alphafold.py` will trigger three
+separate model compilations, one for each unique token size. If instead you pass
+in the following flag to `run_alphafold.py`
+
+```
+--buckets 256,512,768,1024,1280,1536,2048,2560,3072,3584,4096,4608,5120,5376
+```
+
+when running inference on the above three input sizes, the model will be
+compiled only once for the bucket size `5376`. **Note:** for this specific
+example with input sizes `5132, 5280, 5342`, passing in `--buckets 5376` is
+sufficient to achieve the desired compilation behaviour. The provided example
+with multiple buckets illustrates a more general solution suitable for diverse
+input sizes.
+
 ## Additional Flags
 
 ### Compilation Time Workaround with XLA Flags
@@ -109,8 +144,8 @@ ENV XLA_FLAGS="--xla_gpu_enable_triton_gemm=false"
 ### GPU Memory
 
 The following environment variables (set by default in the `Dockerfile`) enable
-folding a single input of size up to 5,120 tokens on a single A100 with 80 GB of
-memory:
+folding a single input of size up to 5,120 tokens on a single A100 (80 GB) or a
+single H100 (80 GB):
 
 ```sh
 ENV XLA_PYTHON_CLIENT_PREALLOCATE=true
@@ -119,12 +154,12 @@ ENV XLA_CLIENT_MEM_FRACTION=0.95
 
 #### Unified Memory
 
-If you would like to run AlphaFold 3 on a GPU with less memory (an A100 with 40
-GB of memory, for instance), we recommend enabling unified memory. Enabling
-unified memory allows the program to spill GPU memory to host memory if there
-isn't enough space. This prevents an OOM, at the cost of making the program
-slower by accessing host memory instead of device memory. To learn more, check
-out the
+If you would like to run AlphaFold 3 on inputs larger than 5,120 tokens, or on a
+GPU with less memory (an A100 with 40 GB of memory, for instance), we recommend
+enabling unified memory. Enabling unified memory allows the program to spill GPU
+memory to host memory if there isn't enough space. This prevents an OOM, at the
+cost of making the program slower by accessing host memory instead of device
+memory. To learn more, check out the
 [NVIDIA blog post](https://developer.nvidia.com/blog/unified-memory-cuda-beginners/).
 
 You can enable unified memory by setting the following environment variables in
