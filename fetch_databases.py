@@ -19,6 +19,7 @@ import concurrent.futures
 import functools
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
 
@@ -104,6 +105,11 @@ def main(argv=('',)) -> None:
         'You do not have write permissions to the destination directory'
         f' {destination}.'
     ) from e
+
+  if shutil.which('curl') is None:
+    raise ValueError('curl is not installed. Please install it and try again.')
+  if shutil.which('zstd') is None:
+    raise ValueError('zstd is not installed. Please install it and try again.')
 
   # Download each of the files and decompress them in parallel.
   with concurrent.futures.ThreadPoolExecutor(
