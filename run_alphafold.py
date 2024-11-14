@@ -56,7 +56,7 @@ import numpy as np
 
 
 _HOME_DIR = pathlib.Path(os.environ.get('HOME'))
-DEFAULT_MODEL_DIR = _HOME_DIR / 'models/model_103275239_1'
+DEFAULT_MODEL_DIR = _HOME_DIR / 'models'
 DEFAULT_DB_DIR = _HOME_DIR / 'public_databases'
 
 
