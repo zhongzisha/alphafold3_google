@@ -610,6 +610,17 @@ def main(_):
     print(f'Failed to create output directory {_OUTPUT_DIR.value}: {e}')
     raise
 
+  if _RUN_INFERENCE.value:
+    # Fail early on incompatible devices, but only if we're running inference.
+    gpu_devices = jax.local_devices(backend='gpu')
+    if gpu_devices and float(gpu_devices[0].compute_capability) < 8.0:
+      raise ValueError(
+          'There are currently known unresolved numerical issues with using'
+          ' devices with compute capability less than 8.0. See '
+          ' https://github.com/google-deepmind/alphafold3/issues/59 for'
+          ' tracking.'
+      )
+
   notice = textwrap.wrap(
       'Running AlphaFold 3. Please note that standard AlphaFold 3 model'
       ' parameters are only available under terms of use provided at'
