@@ -13,7 +13,11 @@ we recommend running with at least 64 GB of RAM.
 
 We provide installation instructions for a machine with an NVIDIA A100 80 GB GPU
 and a clean Ubuntu 22.04 LTS installation, and expect that these instructions
-should aid others with different setups.
+should aid others with different setups. If you are installing locally outside
+of a Docker container, please ensure CUDA, cuDNN, and JAX are correctly
+installed; the
+[JAX installation documentation](https://jax.readthedocs.io/en/latest/installation.html#nvidia-gpu)
+is a useful reference for this case.
 
 The instructions provided below describe how to:
 
