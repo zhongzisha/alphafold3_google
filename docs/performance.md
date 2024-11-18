@@ -66,6 +66,17 @@ them for numerical accuracy and throughput efficiency:
 -   1 NVIDIA A100 (80 GB)
 -   1 NVIDIA H100 (80 GB)
 
+We compare compile-free inference timings of both configurations in the
+following table:
+
+Num Tokens | 1 A100 80 GB (seconds) | 1 H100 80 GB (seconds)
+:--------- | ---------------------: | ---------------------:
+1024       | 62                     | 34
+2048       | 275                    | 144
+3072       | 703                    | 367
+4096       | 1434                   | 774
+5120       | 2547                   | 1416
+
 ### Other Hardware Configurations
 
 #### NVIDIA A100 (40 GB)
