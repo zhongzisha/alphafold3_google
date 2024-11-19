@@ -125,10 +125,9 @@ class Jackhmmer(msa_tool.MsaTool):
       )
 
       with open(output_sto_path) as f:
-        output_sto_str = f.read()
-      a3m = parsers.convert_stockholm_to_a3m(
-          output_sto_str, max_sequences=self.max_sequences
-      )
+        a3m = parsers.convert_stockholm_to_a3m(
+            f, max_sequences=self.max_sequences
+        )
 
     return msa_tool.MsaToolResult(
         target_sequence=target_sequence, a3m=a3m, e_value=self.e_value
