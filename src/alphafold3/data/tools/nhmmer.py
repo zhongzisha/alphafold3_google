@@ -160,17 +160,12 @@ class Nhmmer(msa_tool.MsaTool):
           logging.info('Limiting MSA depth to %d', self._max_sequences)
           break
         a3m.append(f'>{name}\n{seq}')
-      num_hits = len(a3m)
       a3m = '\n'.join(a3m)
     else:
       # Nhmmer returns an empty file if there are no hits.
       # In this case return only the query sequence.
-      num_hits = 1
       a3m = f'>query\n{target_sequence}'
 
     return msa_tool.MsaToolResult(
-        target_sequence=target_sequence,
-        e_value=self._e_value,
-        a3m=a3m,
-        num_hits=num_hits,
+        target_sequence=target_sequence, e_value=self._e_value, a3m=a3m
     )

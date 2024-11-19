@@ -137,12 +137,8 @@ class Jackhmmer(msa_tool.MsaTool):
           logging.info('Limiting MSA depth to %d', self.max_sequences)
           break
         a3m.append(f'>{name}\n{seq}')
-      num_hits = len(a3m)
       a3m = '\n'.join(a3m)
 
     return msa_tool.MsaToolResult(
-        target_sequence=target_sequence,
-        a3m=a3m,
-        e_value=self.e_value,
-        num_hits=num_hits,
+        target_sequence=target_sequence, a3m=a3m, e_value=self.e_value
     )
