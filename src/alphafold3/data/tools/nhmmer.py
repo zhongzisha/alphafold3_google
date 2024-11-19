@@ -136,7 +136,9 @@ class Nhmmer(msa_tool.MsaTool):
         sto_out = f.read()
 
     if sto_out:
-      a3m_out = parsers.convert_stockholm_to_a3m(sto_out)
+      a3m_out = parsers.convert_stockholm_to_a3m(
+          sto_out, max_sequences=self._max_sequences - 1  # Query not included.
+      )
       # Nhmmer hits are generally shorter than the query sequence. To get an MSA
       # of width equal to the query sequence, align hits to the query profile.
       logging.info('Aligning output a3m of size %d bytes', len(a3m_out))
@@ -152,14 +154,8 @@ class Nhmmer(msa_tool.MsaTool):
       )
       a3m_out = ''.join([target_sequence_fasta, a3m_out])
 
-      # Parse sequences (to remove line breaks).
-      a3m = []
-      for i, (seq, name) in enumerate(parsers.lazy_parse_fasta_string(a3m_out)):
-        if i == self._max_sequences:
-          # Apply the maximum MSA depth limit.
-          logging.info('Limiting MSA depth to %d', self._max_sequences)
-          break
-        a3m.append(f'>{name}\n{seq}')
+      # Parse the output a3m to remove line breaks.
+      a3m = [f'>{n}\n{s}' for s, n in parsers.lazy_parse_fasta_string(a3m_out)]
       a3m = '\n'.join(a3m)
     else:
       # Nhmmer returns an empty file if there are no hits.
