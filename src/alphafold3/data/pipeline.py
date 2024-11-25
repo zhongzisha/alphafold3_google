@@ -202,6 +202,7 @@ class DataPipelineConfig:
       template search.
     jackhmmer_n_cpu: Number of CPUs to use for Jackhmmer.
     nhmmer_n_cpu: Number of CPUs to use for Nhmmer.
+    max_template_date: The latest date of templates to use.
   """
 
   # Binary paths.
@@ -227,6 +228,8 @@ class DataPipelineConfig:
   # Optional configuration for MSA tools.
   jackhmmer_n_cpu: int = 8
   nhmmer_n_cpu: int = 8
+
+  max_template_date: datetime.date
 
 
 class DataPipeline:
@@ -375,8 +378,7 @@ class DataPipeline:
             min_hit_length=10,
             deduplicate_sequences=True,
             max_hits=4,
-            # By default, use the date from AF3 paper.
-            max_template_date=datetime.date(2021, 9, 30),
+            max_template_date=data_pipeline_config.max_template_date,
         ),
     )
     self._pdb_database_path = data_pipeline_config.pdb_database_path
