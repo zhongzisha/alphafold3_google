@@ -25,6 +25,46 @@ from alphafold3.data import structure_stores
 from alphafold3.data import templates as templates_lib
 
 
+# Cache to avoid re-running template search for the same sequence in homomers.
+@functools.cache
+def _get_protein_templates(
+    sequence: str,
+    input_msa_a3m: str,
+    run_template_search: bool,
+    templates_config: msa_config.TemplatesConfig,
+    pdb_database_path: str,
+) -> templates_lib.Templates:
+  """Searches for templates for a single protein chain."""
+  if run_template_search:
+    templates_start_time = time.time()
+    logging.info('Getting protein templates for sequence %s', sequence)
+    protein_templates = templates_lib.Templates.from_seq_and_a3m(
+        query_sequence=sequence,
+        msa_a3m=input_msa_a3m,
+        max_template_date=templates_config.filter_config.max_template_date,
+        database_path=templates_config.template_tool_config.database_path,
+        hmmsearch_config=templates_config.template_tool_config.hmmsearch_config,
+        max_a3m_query_sequences=None,
+        chain_poly_type=mmcif_names.PROTEIN_CHAIN,
+        structure_store=structure_stores.StructureStore(pdb_database_path),
+        filter_config=templates_config.filter_config,
+    )
+    logging.info(
+        'Getting protein templates took %.2f seconds for sequence %s',
+        time.time() - templates_start_time,
+        sequence,
+    )
+  else:
+    logging.info('Skipping template search for sequence %s', sequence)
+    protein_templates = templates_lib.Templates(
+        query_sequence=sequence,
+        hits=[],
+        max_template_date=templates_config.filter_config.max_template_date,
+        structure_store=structure_stores.StructureStore(pdb_database_path),
+    )
+  return protein_templates
+
+
 # Cache to avoid re-running the MSA tools for the same sequence in homomers.
 @functools.cache
 def _get_protein_msa_and_templates(
@@ -96,33 +136,14 @@ def _get_protein_msa_and_templates(
       sequence,
   )
 
-  if run_template_search:
-    templates_start_time = time.time()
-    logging.info('Getting protein templates for sequence %s', sequence)
-    protein_templates = templates_lib.Templates.from_seq_and_a3m(
-        query_sequence=sequence,
-        msa_a3m=uniref90_msa.to_a3m(),
-        max_template_date=templates_config.filter_config.max_template_date,
-        database_path=templates_config.template_tool_config.database_path,
-        hmmsearch_config=templates_config.template_tool_config.hmmsearch_config,
-        max_a3m_query_sequences=None,
-        chain_poly_type=mmcif_names.PROTEIN_CHAIN,
-        structure_store=structure_stores.StructureStore(pdb_database_path),
-        filter_config=templates_config.filter_config,
-    )
-    logging.info(
-        'Getting protein templates took %.2f seconds for sequence %s',
-        time.time() - templates_start_time,
-        sequence,
-    )
-  else:
-    logging.info('Skipping template search for sequence %s', sequence)
-    protein_templates = templates_lib.Templates(
-        query_sequence=sequence,
-        hits=[],
-        max_template_date=templates_config.filter_config.max_template_date,
-        structure_store=structure_stores.StructureStore(pdb_database_path),
-    )
+  protein_templates = _get_protein_templates(
+      sequence=sequence,
+      input_msa_a3m=unpaired_protein_msa.to_a3m(),
+      run_template_search=run_template_search,
+      templates_config=templates_config,
+      pdb_database_path=pdb_database_path,
+  )
+
   return unpaired_protein_msa, paired_protein_msa, protein_templates
 
 
@@ -392,6 +413,7 @@ class DataPipeline:
     has_templates = chain.templates is not None
 
     if not has_unpaired_msa and not has_paired_msa and not chain.templates:
+      # MSA None - search. Templates either [] - don't search, or None - search.
       unpaired_msa, paired_msa, template_hits = _get_protein_msa_and_templates(
           sequence=chain.sequence,
           run_template_search=not has_templates,  # Skip template search if [].
@@ -411,7 +433,26 @@ class DataPipeline:
           )
           for hit, struc in template_hits.get_hits_with_structures()
       ]
+    elif has_unpaired_msa and has_paired_msa and not has_templates:
+      # Has MSA, but doesn't have templates. Search for templates only.
+      unpaired_msa = chain.unpaired_msa
+      paired_msa = chain.paired_msa
+      template_hits = _get_protein_templates(
+          sequence=chain.sequence,
+          input_msa_a3m=chain.unpaired_msa,
+          run_template_search=True,
+          templates_config=self._templates_config,
+          pdb_database_path=self._pdb_database_path,
+      )
+      templates = [
+          folding_input.Template(
+              mmcif=struc.to_mmcif(),
+              query_to_template_map=hit.query_to_hit_mapping,
+          )
+          for hit, struc in template_hits.get_hits_with_structures()
+      ]
     else:
+      # Has MSA and templates, don't search for anything.
       if not has_unpaired_msa or not has_paired_msa or not has_templates:
         raise ValueError(
             f'Protein chain {chain.id} has unpaired MSA, paired MSA, or'
