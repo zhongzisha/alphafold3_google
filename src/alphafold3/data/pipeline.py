@@ -29,6 +29,7 @@ from alphafold3.data import templates as templates_lib
 @functools.cache
 def _get_protein_msa_and_templates(
     sequence: str,
+    run_template_search: bool,
     uniref90_msa_config: msa_config.RunConfig,
     mgnify_msa_config: msa_config.RunConfig,
     small_bfd_msa_config: msa_config.RunConfig,
@@ -76,11 +77,8 @@ def _get_protein_msa_and_templates(
       sequence,
   )
 
-  logging.info(
-      'Deduplicating MSAs and getting protein templates for sequence %s',
-      sequence,
-  )
-  templates_start_time = time.time()
+  logging.info('Deduplicating MSAs for sequence %s', sequence)
+  msa_dedupe_start_time = time.time()
   with futures.ThreadPoolExecutor() as executor:
     unpaired_protein_msa_future = executor.submit(
         msa.Msa.from_multiple_msas,
@@ -90,8 +88,18 @@ def _get_protein_msa_and_templates(
     paired_protein_msa_future = executor.submit(
         msa.Msa.from_multiple_msas, msas=[uniprot_msa], deduplicate=False
     )
-    templates_future = executor.submit(
-        templates_lib.Templates.from_seq_and_a3m,
+  unpaired_protein_msa = unpaired_protein_msa_future.result()
+  paired_protein_msa = paired_protein_msa_future.result()
+  logging.info(
+      'Deduplicating MSAs took %.2f seconds for sequence %s',
+      time.time() - msa_dedupe_start_time,
+      sequence,
+  )
+
+  if run_template_search:
+    templates_start_time = time.time()
+    logging.info('Getting protein templates for sequence %s', sequence)
+    protein_templates = templates_lib.Templates.from_seq_and_a3m(
         query_sequence=sequence,
         msa_a3m=uniref90_msa.to_a3m(),
         max_template_date=templates_config.filter_config.max_template_date,
@@ -102,15 +110,19 @@ def _get_protein_msa_and_templates(
         structure_store=structure_stores.StructureStore(pdb_database_path),
         filter_config=templates_config.filter_config,
     )
-  unpaired_protein_msa = unpaired_protein_msa_future.result()
-  paired_protein_msa = paired_protein_msa_future.result()
-  protein_templates = templates_future.result()
-  logging.info(
-      'Deduplicating MSAs and getting protein templates took %.2f seconds for'
-      ' sequence %s',
-      time.time() - templates_start_time,
-      sequence,
-  )
+    logging.info(
+        'Getting protein templates took %.2f seconds for sequence %s',
+        time.time() - templates_start_time,
+        sequence,
+    )
+  else:
+    logging.info('Skipping template search for sequence %s', sequence)
+    protein_templates = templates_lib.Templates(
+        query_sequence=sequence,
+        hits=[],
+        max_template_date=templates_config.filter_config.max_template_date,
+        structure_store=structure_stores.StructureStore(pdb_database_path),
+    )
   return unpaired_protein_msa, paired_protein_msa, protein_templates
 
 
@@ -377,7 +389,27 @@ class DataPipeline:
     has_paired_msa = chain.paired_msa is not None
     has_templates = chain.templates is not None
 
-    if has_unpaired_msa or has_paired_msa or has_templates:
+    if not has_unpaired_msa and not has_paired_msa and not chain.templates:
+      unpaired_msa, paired_msa, template_hits = _get_protein_msa_and_templates(
+          sequence=chain.sequence,
+          run_template_search=not has_templates,  # Skip template search if [].
+          uniref90_msa_config=self._uniref90_msa_config,
+          mgnify_msa_config=self._mgnify_msa_config,
+          small_bfd_msa_config=self._small_bfd_msa_config,
+          uniprot_msa_config=self._uniprot_msa_config,
+          templates_config=self._templates_config,
+          pdb_database_path=self._pdb_database_path,
+      )
+      unpaired_msa = unpaired_msa.to_a3m()
+      paired_msa = paired_msa.to_a3m()
+      templates = [
+          folding_input.Template(
+              mmcif=struc.to_mmcif(),
+              query_to_template_map=hit.query_to_hit_mapping,
+          )
+          for hit, struc in template_hits.get_hits_with_structures()
+      ]
+    else:
       if not has_unpaired_msa or not has_paired_msa or not has_templates:
         raise ValueError(
             f'Protein chain {chain.id} has unpaired MSA, paired MSA, or'
@@ -404,25 +436,6 @@ class DataPipeline:
       unpaired_msa = chain.unpaired_msa or empty_msa
       paired_msa = chain.paired_msa or empty_msa
       templates = chain.templates
-    else:
-      unpaired_msa, paired_msa, template_hits = _get_protein_msa_and_templates(
-          sequence=chain.sequence,
-          uniref90_msa_config=self._uniref90_msa_config,
-          mgnify_msa_config=self._mgnify_msa_config,
-          small_bfd_msa_config=self._small_bfd_msa_config,
-          uniprot_msa_config=self._uniprot_msa_config,
-          templates_config=self._templates_config,
-          pdb_database_path=self._pdb_database_path,
-      )
-      unpaired_msa = unpaired_msa.to_a3m()
-      paired_msa = paired_msa.to_a3m()
-      templates = [
-          folding_input.Template(
-              mmcif=struc.to_mmcif(),
-              query_to_template_map=hit.query_to_hit_mapping,
-          )
-          for hit, struc in template_hits.get_hits_with_structures()
-      ]
 
     return dataclasses.replace(
         chain,

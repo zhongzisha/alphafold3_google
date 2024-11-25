@@ -448,6 +448,30 @@ You can provide multiple structural templates. Note that if an mmCIF containing
 more than one chain is provided, you will get an error since it is not possible
 to determine which of the chains should be used as the template.
 
+You can run template-free (but still run genetic search and build MSA) by
+setting templates to `[]` and either explicitly setting both `unpairedMsa` and
+`pairedMsa` to `null`:
+
+```json
+"protein": {
+  "id": "A",
+  "sequence": ...,
+  "pairedMsa": null,
+  "unpairedMsa": null,
+  "templates": []
+}
+```
+
+Or you can simply fully omit them:
+
+```json
+"protein": {
+  "id": "A",
+  "sequence": ...,
+  "templates": []
+}
+```
+
 ## Bonds
 
 To manually specify covalent bonds, use the `bondedAtomPairs` field. This is
