@@ -228,6 +228,11 @@ _FLASH_ATTENTION_IMPLEMENTATION = flags.DEFINE_enum(
         ' across GPU devices.'
     ),
 )
+_NUM_DIFFUSION_SAMPLES = flags.DEFINE_integer(
+    'num_diffusion_samples',
+    5,
+    'Number of diffusion samples to generate.',
+)
 
 
 class ConfigurableModel(Protocol):
@@ -256,12 +261,16 @@ def make_model_config(
     *,
     model_class: type[ModelT] = diffusion_model.Diffuser,
     flash_attention_implementation: attention.Implementation = 'triton',
+    num_diffusion_samples: int = 5,
 ):
+  """Returns a model config with some defaults overridden."""
   config = model_class.Config()
   if hasattr(config, 'global_config'):
     config.global_config.flash_attention_implementation = (
         flash_attention_implementation
     )
+  if hasattr(config, 'heads'):
+    config.heads.diffusion.eval.num_samples = num_diffusion_samples
   return config
 
 
@@ -687,7 +696,8 @@ def main(_):
         config=make_model_config(
             flash_attention_implementation=typing.cast(
                 attention.Implementation, _FLASH_ATTENTION_IMPLEMENTATION.value
-            )
+            ),
+            num_diffusion_samples=_NUM_DIFFUSION_SAMPLES.value,
         ),
         device=devices[0],
         model_dir=pathlib.Path(MODEL_DIR.value),
