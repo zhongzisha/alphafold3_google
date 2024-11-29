@@ -806,11 +806,12 @@ class Input:
 
     struc = structure.from_mmcif(
         mmcif_str,
-        include_water=False,
         fix_mse_residues=True,
+        fix_arginines=True,
         fix_unknown_dna=True,
-        include_bonds=True,
+        include_water=False,
         include_other=False,
+        include_bonds=True,
     )
 
     # Create default bioassembly, expanding structures implied by stoichiometry.
