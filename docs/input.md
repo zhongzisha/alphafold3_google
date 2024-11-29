@@ -403,8 +403,8 @@ method gives exact control over the placement of each sequence in the MSA, as
 opposed to relying on name-matching post-processing heuristics used for
 `pairedMsa`.
 
-When setting `unpairedMsa` manually, the `pairedMsa` must be left unset (i.e.
-the `pairedMsa` key should not be present in the JSON).
+When setting `unpairedMsa` manually, the `pairedMsa` must be explicitly set to
+an empty string (`""`).
 
 For instance, if there are two chains `DEEP` and `MIND` which we want to be
 paired on organism A and C, we can achieve it as follows:
