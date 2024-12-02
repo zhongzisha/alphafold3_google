@@ -1014,15 +1014,6 @@ class Input:
     return ''.join(l for l in lower_spaceless_name if l in allowed_chars)
 
 
-def check_unique_sanitised_names(fold_inputs: Sequence[Input]) -> None:
-  """Checks that the names of the fold inputs are unique."""
-  names = [fi.sanitised_name() for fi in fold_inputs]
-  if len(set(names)) != len(names):
-    raise ValueError(
-        f'Fold inputs must have unique sanitised names, got {names}.'
-    )
-
-
 def load_fold_inputs_from_path(json_path: pathlib.Path) -> Sequence[Input]:
   """Loads multiple fold inputs from a JSON string."""
   with open(json_path, 'r') as f:
@@ -1065,8 +1056,6 @@ def load_fold_inputs_from_path(json_path: pathlib.Path) -> Sequence[Input]:
           ' top-level is not a list.'
       ) from e
 
-  check_unique_sanitised_names(fold_inputs)
-
   return fold_inputs
 
 
@@ -1088,7 +1077,5 @@ def load_fold_inputs_from_dir(input_dir: pathlib.Path) -> Sequence[Input]:
       continue
 
     fold_inputs.extend(load_fold_inputs_from_path(file_path))
-
-  check_unique_sanitised_names(fold_inputs)
 
   return fold_inputs
