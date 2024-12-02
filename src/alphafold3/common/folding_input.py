@@ -806,11 +806,20 @@ class Input:
 
     struc = structure.from_mmcif(
         mmcif_str,
+        # Change MSE residues to MET residues.
         fix_mse_residues=True,
+        # Fix arginine atom names. This is not needed since the input discards
+        # any atom-level data, but kept for consistency with the paper.
         fix_arginines=True,
+        # Fix unknown DNA residues to the correct unknown DNA residue type.
         fix_unknown_dna=True,
+        # Do not include water molecules.
         include_water=False,
+        # Do not include things like DNA/RNA hybrids. This will be changed once
+        # we have a way of handling these in the AlphaFold 3 input format.
         include_other=False,
+        # Include the specific bonds defined in the mmCIF bond table, e.g.
+        # covalent bonds for PTMs.
         include_bonds=True,
     )
 
