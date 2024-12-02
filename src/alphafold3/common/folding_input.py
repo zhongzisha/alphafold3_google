@@ -10,7 +10,7 @@
 
 """Model input dataclass."""
 
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Collection, Iterator, Mapping, Sequence
 import dataclasses
 import json
 import logging
@@ -1014,7 +1014,7 @@ class Input:
     return ''.join(l for l in lower_spaceless_name if l in allowed_chars)
 
 
-def load_fold_inputs_from_path(json_path: pathlib.Path) -> Sequence[Input]:
+def load_fold_inputs_from_path(json_path: pathlib.Path) -> Iterator[Input]:
   """Loads multiple fold inputs from a JSON string."""
   with open(json_path, 'r') as f:
     json_str = f.read()
@@ -1022,7 +1022,6 @@ def load_fold_inputs_from_path(json_path: pathlib.Path) -> Sequence[Input]:
   # Parse the JSON string, so we can detect its format.
   raw_json = json.loads(json_str)
 
-  fold_inputs = []
   if isinstance(raw_json, list):
     # AlphaFold Server JSON.
     logging.info(
@@ -1034,7 +1033,7 @@ def load_fold_inputs_from_path(json_path: pathlib.Path) -> Sequence[Input]:
     logging.info('Loading %d fold jobs from %s', len(raw_json), json_path)
     for fold_job_idx, fold_job in enumerate(raw_json):
       try:
-        fold_inputs.append(Input.from_alphafoldserver_fold_job(fold_job))
+        yield Input.from_alphafoldserver_fold_job(fold_job)
       except ValueError as e:
         raise ValueError(
             f'Failed to load fold job {fold_job_idx} from {json_path}. The JSON'
@@ -1048,7 +1047,7 @@ def load_fold_inputs_from_path(json_path: pathlib.Path) -> Sequence[Input]:
     )
     # AlphaFold 3 JSON.
     try:
-      fold_inputs.append(Input.from_json(json_str))
+      yield Input.from_json(json_str)
     except ValueError as e:
       raise ValueError(
           f'Failed to load fold input from {json_path}. The JSON at'
@@ -1056,26 +1055,18 @@ def load_fold_inputs_from_path(json_path: pathlib.Path) -> Sequence[Input]:
           ' top-level is not a list.'
       ) from e
 
-  return fold_inputs
 
-
-def load_fold_inputs_from_dir(input_dir: pathlib.Path) -> Sequence[Input]:
+def load_fold_inputs_from_dir(input_dir: pathlib.Path) -> Iterator[Input]:
   """Loads multiple fold inputs from all JSON files in a given input_dir.
 
   Args:
     input_dir: The directory containing the JSON files.
 
-  Returns:
+  Yields:
     The fold inputs from all JSON files in the input directory.
-
-  Raises:
-    ValueError: If the fold inputs have non-unique sanitised names.
   """
-  fold_inputs = []
   for file_path in input_dir.glob('*.json'):
     if not file_path.is_file():
       continue
 
-    fold_inputs.extend(load_fold_inputs_from_path(file_path))
-
-  return fold_inputs
+    yield from load_fold_inputs_from_path(file_path)

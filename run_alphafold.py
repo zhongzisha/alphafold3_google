@@ -714,8 +714,10 @@ def main(_):
     print('Skipping running model inference.')
     model_runner = None
 
-  print(f'Processing {len(fold_inputs)} fold inputs.')
+  print('Processing fold inputs.')
+  num_fold_inputs = 0
   for fold_input in fold_inputs:
+    print(f'Processing fold input #{num_fold_inputs + 1}')
     process_fold_input(
         fold_input=fold_input,
         data_pipeline_config=data_pipeline_config,
@@ -723,8 +725,9 @@ def main(_):
         output_dir=os.path.join(_OUTPUT_DIR.value, fold_input.sanitised_name()),
         buckets=tuple(int(bucket) for bucket in _BUCKETS.value),
     )
+    num_fold_inputs += 1
 
-  print(f'Done processing {len(fold_inputs)} fold inputs.')
+  print(f'Done processing {num_fold_inputs} fold inputs.')
 
 
 if __name__ == '__main__':
