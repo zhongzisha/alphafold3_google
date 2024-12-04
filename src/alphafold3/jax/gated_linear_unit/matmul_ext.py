@@ -21,6 +21,7 @@ from alphafold3.jax.gated_linear_unit import matmul_config
 import jax
 from jax._src.state import discharge
 from jax.experimental import pallas as pl
+from jax.experimental.pallas import triton as plgpu
 import jax.numpy as jnp
 import jaxtyping
 from jaxtyping import Array, Float, Int  # pylint: disable=g-importing-member,g-multiple-import
@@ -215,8 +216,8 @@ def _gated_linear_unit(
       grid=(pl.cdiv(m, config.block_m) * pl.cdiv(n, config.block_n),),
       out_shape=jax.ShapeDtypeStruct((m, n), x.dtype) if dst is None else dst,
       input_output_aliases=input_output_aliases,
-      compiler_params=dict(
-          triton=dict(num_warps=config.num_warps, num_stages=config.num_stages)
+      compiler_params=plgpu.TritonCompilerParams(
+          num_warps=config.num_warps, num_stages=config.num_stages
       ),
   )(x, weights_projection, weights_gate, dst, epilogue_args)
 
