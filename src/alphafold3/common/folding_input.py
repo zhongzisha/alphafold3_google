@@ -156,6 +156,10 @@ class ProteinChain:
       )
     if any(not 0 < mod[1] <= len(self.sequence) for mod in self.ptms):
       raise ValueError(f'Invalid protein modification index: {self.ptms}')
+    if any(mod[0].startswith('CCD_') for mod in self.ptms):
+      raise ValueError(
+          f'Protein ptms must not contain the "CCD_" prefix, got {self.ptms}'
+      )
 
     # Use hashable types for ptms and templates.
     if self.ptms is not None:
@@ -331,6 +335,11 @@ class RnaChain:
       raise ValueError(f'RNA must contain only letters, got "{self.sequence}"')
     if any(not 0 < mod[1] <= len(self.sequence) for mod in self.modifications):
       raise ValueError(f'Invalid RNA modification index: {self.modifications}')
+    if any(mod[0].startswith('CCD_') for mod in self.modifications):
+      raise ValueError(
+          'RNA modifications must not contain the "CCD_" prefix, got'
+          f' {self.modifications}'
+      )
 
     # Use hashable types for modifications.
     object.__setattr__(self, 'modifications', tuple(self.modifications))
@@ -429,6 +438,11 @@ class DnaChain:
       raise ValueError(f'DNA must contain only letters, got "{self.sequence}"')
     if any(not 0 < mod[1] <= len(self.sequence) for mod in self.modifications):
       raise ValueError(f'Invalid DNA modification index: {self.modifications}')
+    if any(mod[0].startswith('CCD_') for mod in self.modifications):
+      raise ValueError(
+          'DNA modifications must not contain the "CCD_" prefix, got'
+          f' {self.modifications}'
+      )
 
     # Use hashable types for modifications.
     object.__setattr__(self, 'modifications', tuple(self.modifications))
