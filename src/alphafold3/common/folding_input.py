@@ -26,6 +26,7 @@ from alphafold3 import structure
 from alphafold3.constants import chemical_components
 from alphafold3.constants import mmcif_names
 from alphafold3.constants import residue_names
+from alphafold3.cpp import cif_dict
 from alphafold3.structure import mmcif as mmcif_lib
 import rdkit.Chem as rd_chem
 import zstandard as zstd
@@ -612,6 +613,33 @@ def _sample_rng_seed() -> int:
   return random.randint(0, 2**32 - 1)
 
 
+def _validate_user_ccd_keys(keys: Sequence[str]) -> None:
+  """Validates the keys of the user-defined CCD dictionary."""
+  mandatory_keys = (
+      '_chem_comp.id',
+      '_chem_comp.name',
+      '_chem_comp.type',
+      '_chem_comp.formula',
+      '_chem_comp.mon_nstd_parent_comp_id',
+      '_chem_comp.pdbx_synonyms',
+      '_chem_comp.formula_weight',
+      '_chem_comp_atom.comp_id',
+      '_chem_comp_atom.atom_id',
+      '_chem_comp_atom.type_symbol',
+      '_chem_comp_atom.charge',
+      '_chem_comp_atom.pdbx_leaving_atom_flag',
+      '_chem_comp_atom.pdbx_model_Cartn_x_ideal',
+      '_chem_comp_atom.pdbx_model_Cartn_y_ideal',
+      '_chem_comp_atom.pdbx_model_Cartn_z_ideal',
+      '_chem_comp_bond.atom_id_1',
+      '_chem_comp_bond.atom_id_2',
+      '_chem_comp_bond.value_order',
+      '_chem_comp_bond.pdbx_aromatic_flag',
+  )
+  if missing_keys := set(mandatory_keys) - set(keys):
+    raise ValueError(f'User-defined CCD is missing these keys: {missing_keys}')
+
+
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class Input:
   """AlphaFold input.
@@ -665,6 +693,8 @@ class Input:
       object.__setattr__(
           self, 'bonded_atom_pairs', tuple(self.bonded_atom_pairs)
       )
+    if self.user_ccd is not None:
+      _validate_user_ccd_keys(cif_dict.from_string(self.user_ccd).keys())
 
   @property
   def protein_chains(self) -> Sequence[ProteinChain]:
