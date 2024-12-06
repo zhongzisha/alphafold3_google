@@ -167,6 +167,16 @@ class ProteinChain:
     if self.templates is not None:
       object.__setattr__(self, 'templates', tuple(self.templates))
 
+  def hash_without_id(self) -> int:
+    """Returns a hash ignoring the ID - useful for deduplication."""
+    return hash((
+        self.sequence,
+        self.ptms,
+        self.paired_msa,
+        self.unpaired_msa,
+        self.templates,
+    ))
+
   @classmethod
   def from_alphafoldserver_dict(
       cls, json_dict: Mapping[str, Any], seq_id: str
@@ -262,7 +272,9 @@ class ProteinChain:
         templates=templates,
     )
 
-  def to_dict(self) -> Mapping[str, Mapping[str, Any]]:
+  def to_dict(
+      self, seq_id: str | Sequence[str] | None = None
+  ) -> Mapping[str, Mapping[str, Any]]:
     """Converts ProteinChain to an AlphaFold JSON dict."""
     if self.templates is None:
       templates = None
@@ -278,7 +290,7 @@ class ProteinChain:
           for template in self.templates
       ]
     contents = {
-        'id': self.id,
+        'id': seq_id or self.id,
         'sequence': self.sequence,
         'modifications': [
             {'ptmType': ptm[0], 'ptmPosition': ptm[1]} for ptm in self.ptms
@@ -344,6 +356,10 @@ class RnaChain:
     # Use hashable types for modifications.
     object.__setattr__(self, 'modifications', tuple(self.modifications))
 
+  def hash_without_id(self) -> int:
+    """Returns a hash ignoring the ID - useful for deduplication."""
+    return hash((self.sequence, self.modifications, self.unpaired_msa))
+
   @classmethod
   def from_alphafoldserver_dict(
       cls, json_dict: Mapping[str, Any], seq_id: str
@@ -390,10 +406,12 @@ class RnaChain:
         unpaired_msa=unpaired_msa,
     )
 
-  def to_dict(self) -> Mapping[str, Mapping[str, Any]]:
+  def to_dict(
+      self, seq_id: str | Sequence[str] | None = None
+  ) -> Mapping[str, Mapping[str, Any]]:
     """Converts RnaChain to an AlphaFold JSON dict."""
     contents = {
-        'id': self.id,
+        'id': seq_id or self.id,
         'sequence': self.sequence,
         'modifications': [
             {'modificationType': mod[0], 'basePosition': mod[1]}
@@ -447,6 +465,10 @@ class DnaChain:
     # Use hashable types for modifications.
     object.__setattr__(self, 'modifications', tuple(self.modifications))
 
+  def hash_without_id(self) -> int:
+    """Returns a hash ignoring the ID - useful for deduplication."""
+    return hash((self.sequence, self.modifications))
+
   @classmethod
   def from_alphafoldserver_dict(
       cls, json_dict: Mapping[str, Any], seq_id: str
@@ -478,10 +500,12 @@ class DnaChain:
         modifications=modifications,
     )
 
-  def to_dict(self) -> Mapping[str, Mapping[str, Any]]:
+  def to_dict(
+      self, seq_id: str | Sequence[str] | None = None
+  ) -> Mapping[str, Mapping[str, Any]]:
     """Converts DnaChain to an AlphaFold JSON dict."""
     contents = {
-        'id': self.id,
+        'id': seq_id or self.id,
         'sequence': self.sequence,
         'modifications': [
             {'modificationType': mod[0], 'basePosition': mod[1]}
@@ -532,6 +556,10 @@ class Ligand:
     if self.ccd_ids is not None:
       object.__setattr__(self, 'ccd_ids', tuple(self.ccd_ids))
 
+  def hash_without_id(self) -> int:
+    """Returns a hash ignoring the ID - useful for deduplication."""
+    return hash((self.ccd_ids, self.smiles))
+
   @classmethod
   def from_alphafoldserver_dict(
       cls, json_dict: Mapping[str, Any], seq_id: str
@@ -566,9 +594,11 @@ class Ligand:
     else:
       raise ValueError(f'Unknown ligand type: {json_dict}')
 
-  def to_dict(self) -> Mapping[str, Any]:
+  def to_dict(
+      self, seq_id: str | Sequence[str] | None = None
+  ) -> Mapping[str, Mapping[str, Any]]:
     """Converts Ligand to an AlphaFold JSON dict."""
-    contents = {'id': self.id}
+    contents = {'id': seq_id or self.id}
     if self.ccd_ids is not None:
       contents['ccdCodes'] = self.ccd_ids
     if self.smiles is not None:
@@ -1060,12 +1090,23 @@ class Input:
 
   def to_json(self) -> str:
     """Converts Input to an AlphaFold JSON."""
+    deduped_chains = {}
+    deduped_chain_ids = {}
+    for chain in self.chains:
+      deduped_chains[chain.hash_without_id()] = chain
+      deduped_chain_ids.setdefault(chain.hash_without_id(), []).append(chain.id)
+
+    sequences = []
+    for chain_content_hash, ids in deduped_chain_ids.items():
+      chain = deduped_chains[chain_content_hash]
+      sequences.append(chain.to_dict(seq_id=ids if len(ids) > 1 else ids[0]))
+
     alphafold_json = json.dumps(
         {
             'dialect': JSON_DIALECT,
             'version': JSON_VERSION,
             'name': self.name,
-            'sequences': [chain.to_dict() for chain in self.chains],
+            'sequences': sequences,
             'modelSeeds': self.rng_seeds,
             'bondedAtomPairs': self.bonded_atom_pairs,
             'userCCD': self.user_ccd,
