@@ -1477,7 +1477,6 @@ def get_reference(
     ccd: chemical_components.Ccd,
     random_state: np.random.RandomState,
     ref_max_modified_date: datetime.date,
-    intra_ligand_ptm_bonds: bool,
 ) -> tuple[dict[str, Any], Any, Any]:
   """Reference structure for residue from CCD or SMILES.
 
@@ -1492,7 +1491,6 @@ def get_reference(
     random_state: Numpy RandomState
     ref_max_modified_date: date beyond which reference structures must not be
       modified to be allowed to use reference coordinates.
-    intra_ligand_ptm_bonds: Whether to return intra ligand/ ptm bonds.
 
   Returns:
     Mapping from atom names to features, from_atoms, dest_atoms.
@@ -1575,13 +1573,8 @@ def get_reference(
   pos = random_augmentation(pos, random_state)
 
   # Extract atom and bond information from CCD cif.
-  if intra_ligand_ptm_bonds:
-    assert ccd_cif is not None, 'CCD CIF is None'
-    from_atom = ccd_cif.get('_chem_comp_bond.atom_id_1', None)
-    dest_atom = ccd_cif.get('_chem_comp_bond.atom_id_2', None)
-  else:
-    from_atom = None
-    dest_atom = None
+  from_atom = ccd_cif.get('_chem_comp_bond.atom_id_1', None)
+  dest_atom = ccd_cif.get('_chem_comp_bond.atom_id_2', None)
 
   features = {}
   for atom_name in atom_names:
@@ -1624,7 +1617,6 @@ class RefStructure:
       chemical_components_data: struc_chem_comps.ChemicalComponentsData,
       random_state: np.random.RandomState,
       ref_max_modified_date: datetime.date,
-      intra_ligand_ptm_bonds: bool,
       ligand_ligand_bonds: atom_layout.AtomLayout | None = None,
   ) -> tuple[Self, Any]:
     """Reference structure information for each residue."""
@@ -1663,7 +1655,6 @@ class RefStructure:
               ccd=ccd,
               random_state=random_state,
               ref_max_modified_date=ref_max_modified_date,
-              intra_ligand_ptm_bonds=intra_ligand_ptm_bonds,
           )
           conformations[(chain_id, res_id)] = conf
 
