@@ -38,7 +38,7 @@ directly from Google. Use is subject to these
 See the [installation documentation](docs/installation.md).
 
 Once you have installed AlphaFold 3, you can test your setup using e.g. the
-following input JSON file named `alphafold_input.json`:
+following input JSON file named `fold_input.json`:
 
 ```json
 {
