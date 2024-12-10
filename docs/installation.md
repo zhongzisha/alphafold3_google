@@ -301,7 +301,7 @@ If you have databases on SSD in `<SSD_DB_DIR>` you can use uses it as the
 location to look for databases but allowing for a multiple fallbacks with
 `--db_dir` which can be specified multiple times.
 
-```
+```sh
 docker run -it \
     --volume $HOME/af_input:/root/af_input \
     --volume $HOME/af_output:/root/af_output \
@@ -324,6 +324,15 @@ paths (flags named `--volume` above) in the correct locations.
 ```
 docker: Error response from daemon: error while creating mount source path '/srv/alphafold3_data/models': mkdir /srv/alphafold3_data/models: permission denied.
 ```
+
+`run_alphafold.py` supports many flags for controlling performance, running on
+multiple input files, specifying external binary paths, and more. See
+
+```sh
+docker run alphafold3 python run_alphafold.py --help
+```
+
+for more information.
 
 ## Running Using Singularity Instead of Docker
 
