@@ -1510,20 +1510,20 @@ def get_reference(
         and res_name in chemical_components_data.chem_comp
         and chemical_components_data.chem_comp[res_name].pdbx_smiles
     ):
-      logging.warning('No CCD entry or SMILES for %s', res_name)
-      # If no SMILES or CCD, return empty dictionary.
-      return dict(), None, None
+      raise ValueError(f'No CCD entry or SMILES for {res_name}.')
     smiles_string = chemical_components_data.chem_comp[res_name].pdbx_smiles
     logging.info('Using SMILES for: %s - %s', res_name, smiles_string)
 
     mol = Chem.MolFromSmiles(smiles_string)
     if mol is None:
-      logging.warning(
-          'Fail to construct RDKit Mol for %s, from SMILES string: %s',
-          res_name,
-          smiles_string,
+      # In this case the model will not have any information about this molecule
+      # and will not be able to predict anything about it.
+      raise ValueError(
+          f'Failed to construct RDKit Mol for {res_name} from SMILES string: '
+          f'{smiles_string} . This is likely due to an issue with the SMILES '
+          'string. Note that the userCCD input format provides an alternative '
+          'way to define custom molecules directly without RDKit or SMILES.'
       )
-      return dict(), None, None
     mol = Chem.AddHs(mol)
     # No existing names, we assign them from the graph.
     mol = rdkit_utils.assign_atom_names_from_graph(mol)

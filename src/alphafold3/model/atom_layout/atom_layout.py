@@ -798,6 +798,14 @@ def make_flat_atom_layout(
     elif residues.smiles_string[idx]:
       # Get atoms from RDKit via SMILES.
       mol = Chem.MolFromSmiles(residues.smiles_string[idx])
+      if mol is None:
+        raise ValueError(
+            f'Failed to construct RDKit Mol for {residues.res_name[idx]} from'
+            f' SMILES string: {residues.smiles_string[idx]} . This is likely'
+            ' due to an issue with the SMILES string. Note that the userCCD'
+            ' input format provides an alternative way to define custom'
+            ' molecules directly without RDKit or SMILES.'
+        )
       mol = rdkit_utils.assign_atom_names_from_graph(mol)
       atom_names_elements = [
           (a.GetProp('atom_name'), a.GetSymbol()) for a in mol.GetAtoms()
