@@ -645,13 +645,14 @@ def main(_):
             ' https://developer.nvidia.com/cuda-gpus).'
         )
       elif 7.0 <= compute_capability < 8.0:
-        raise ValueError(
-            'There are currently known unresolved numerical issues with using'
-            ' devices with GPU compute capability 7.x (see'
-            ' https://developer.nvidia.com/cuda-gpus). Follow '
-            ' https://github.com/google-deepmind/alphafold3/issues/59 for'
-            ' tracking.'
-        )
+        xla_flags = os.environ.get('XLA_FLAGS')
+        required_flag = '--xla_disable_hlo_passes=custom-kernel-fusion-rewriter'
+        if not xla_flags or required_flag not in xla_flags:
+          raise ValueError(
+              'For devices with GPU compute capability 7.x (see'
+              ' https://developer.nvidia.com/cuda-gpus) the ENV XLA_FLAGS must'
+              f' include "{required_flag}".'
+          )
 
   notice = textwrap.wrap(
       'Running AlphaFold 3. Please note that standard AlphaFold 3 model'
