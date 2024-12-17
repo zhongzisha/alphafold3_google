@@ -484,8 +484,10 @@ class DataPipeline:
       paired_msa = chain.paired_msa or empty_msa
       templates = chain.templates
 
-    return dataclasses.replace(
-        chain,
+    return folding_input.ProteinChain(
+        id=chain.id,
+        sequence=chain.sequence,
+        ptms=chain.ptms,
         unpaired_msa=unpaired_msa,
         paired_msa=paired_msa,
         templates=templates,
@@ -514,7 +516,12 @@ class DataPipeline:
           rfam_msa_config=self._rfam_msa_config,
           rnacentral_msa_config=self._rnacentral_msa_config,
       ).to_a3m()
-    return dataclasses.replace(chain, unpaired_msa=unpaired_msa)
+    return folding_input.RnaChain(
+        id=chain.id,
+        sequence=chain.sequence,
+        modifications=chain.modifications,
+        unpaired_msa=unpaired_msa,
+    )
 
   def process(self, fold_input: folding_input.Input) -> folding_input.Input:
     """Runs MSA and template tools and returns a new Input with the results."""
