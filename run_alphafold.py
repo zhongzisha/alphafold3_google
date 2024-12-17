@@ -407,11 +407,11 @@ def predict_structure(
     )
     print(
         'Running model inference and extracting output structures for seed'
-        f' {seed} took  {time.time() - inference_start_time:.2f} seconds.'
+        f' {seed} took {time.time() - inference_start_time:.2f} seconds.'
     )
   print(
       'Running model inference and extracting output structures for seeds'
-      f' {fold_input.rng_seeds} took '
+      f' {fold_input.rng_seeds} took'
       f' {time.time() - all_inference_start_time:.2f} seconds.'
   )
   return all_inference_results
