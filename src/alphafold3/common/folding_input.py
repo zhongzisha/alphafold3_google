@@ -1180,12 +1180,6 @@ def load_fold_inputs_from_path(json_path: pathlib.Path) -> Iterator[Input]:
 
   if isinstance(raw_json, list):
     # AlphaFold Server JSON.
-    logging.info(
-        'Detected %s is an AlphaFold Server JSON since the top-level is a'
-        ' list.',
-        json_path,
-    )
-
     logging.info('Loading %d fold jobs from %s', len(raw_json), json_path)
     for fold_job_idx, fold_job in enumerate(raw_json):
       try:
@@ -1193,22 +1187,16 @@ def load_fold_inputs_from_path(json_path: pathlib.Path) -> Iterator[Input]:
       except ValueError as e:
         raise ValueError(
             f'Failed to load fold job {fold_job_idx} from {json_path}. The JSON'
-            f' at {json_path} was detected to be an AlphaFold Server JSON since'
-            ' the top-level is a list.'
+            ' was detected to be the AlphaFold Server dialect.'
         ) from e
   else:
-    logging.info(
-        'Detected %s is an AlphaFold 3 JSON since the top-level is not a list.',
-        json_path,
-    )
     # AlphaFold 3 JSON.
     try:
       yield Input.from_json(json_str, json_path)
     except ValueError as e:
       raise ValueError(
-          f'Failed to load fold input from {json_path}. The JSON at'
-          f' {json_path} was detected to be an AlphaFold 3 JSON since the'
-          ' top-level is not a list.'
+          f'Failed to load fold input from {json_path}. The JSON was detected'
+          ' to be the AlphaFold 3 dialect.'
       ) from e
 
 
