@@ -133,6 +133,7 @@ class ProteinChain:
 
   def __init__(
       self,
+      *,
       id: str,  # pylint: disable=redefined-builtin
       sequence: str,
       ptms: Sequence[tuple[str, int]],
@@ -391,6 +392,7 @@ class RnaChain:
 
   def __init__(
       self,
+      *,
       id: str,  # pylint: disable=redefined-builtin
       sequence: str,
       modifications: Sequence[tuple[str, int]],
@@ -552,6 +554,7 @@ class DnaChain:
 
   def __init__(
       self,
+      *,
       id: str,  # pylint: disable=redefined-builtin
       sequence: str,
       modifications: Sequence[tuple[str, int]],
