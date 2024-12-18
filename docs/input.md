@@ -332,9 +332,43 @@ The fields specify the following:
     standard CCD codes, or custom codes pointing to the
     [user-provided CCD](#user-provided-ccd).
 *   `smiles: str`: An optional string defining the ligand using a SMILES string.
+    The SMILES string must be correctly JSON-escaped.
 
 Each ligand may be specified using CCD codes or SMILES but not both, i.e. for a
 given ligand, the `ccdCodes` and `smiles` fields are mutually exclusive.
+
+#### SMILES string JSON escaping
+
+The SMILES string must be correctly JSON-escaped, in particular the backslash
+character must be escaped as two backslashes, otherwise the JSON parser will
+fail with a `JSONDecodeError`. For instance, the following SMILES string
+`CCC[C@@H](O)CC\C=C\C=C\C#CC#C\C=C\CO` has to be specified as:
+
+```json
+{
+  "ligand": {
+    "id": "A",
+    "smiles": "CCC[C@@H](O)CC\\C=C\\C=C\\C#CC#C\\C=C\\CO"
+  }
+}
+```
+
+You can JSON-escape the SMILES string using the
+[`jq`](https://github.com/jqlang/jq) command-line tool which should be easily
+installable on most Linux systems:
+
+```bash
+jq -R . <<< 'CCC[C@@H](O)CC\C=C\C=C\C#CC#C\C=C\CO'  # Replace with your SMILES.
+```
+
+Alternatively, you can use this Python code:
+
+```python
+import json
+
+smiles = r'CCC[C@@H](O)CC\C=C\C=C\C#CC#C\C=C\CO'  # Replace with your SMILES.
+print(json.dumps(smiles))
+```
 
 ### Ions
 
