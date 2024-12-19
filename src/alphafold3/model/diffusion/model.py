@@ -199,6 +199,7 @@ class Diffuser(hk.Module):
     global_config: model_config.GlobalConfig = base_config.autocreate()
     heads: 'Diffuser.HeadsConfig' = base_config.autocreate()
     num_recycles: int = 10
+    return_embeddings: bool = False
 
   def __init__(self, config: Config, name: str = 'diffuser'):
     super().__init__(name=name)
@@ -302,11 +303,15 @@ class Diffuser(hk.Module):
         self.config.heads.distogram, self.global_config
     )(batch, embeddings)
 
-    return {
+    output = {
         'diffusion_samples': samples,
         'distogram': distogram,
         **confidence_output,
     }
+    if self.config.return_embeddings:
+      output['single_embeddings'] = embeddings['single']
+      output['pair_embeddings'] = embeddings['pair']
+    return output
 
   @classmethod
   def get_inference_result(

@@ -241,6 +241,13 @@ _NUM_DIFFUSION_SAMPLES = flags.DEFINE_integer(
     'Number of diffusion samples to generate.',
 )
 
+# Output controls.
+_SAVE_EMBEDDINGS = flags.DEFINE_bool(
+    'save_embeddings',
+    False,
+    'Whether to save the final trunk single and pair embeddings in the output.',
+)
+
 
 class ConfigurableModel(Protocol):
   """A model with a nested config class."""
@@ -269,6 +276,7 @@ def make_model_config(
     model_class: type[ModelT] = diffusion_model.Diffuser,
     flash_attention_implementation: attention.Implementation = 'triton',
     num_diffusion_samples: int = 5,
+    return_embeddings: bool = False,
 ):
   """Returns a model config with some defaults overridden."""
   config = model_class.Config()
@@ -278,6 +286,8 @@ def make_model_config(
     )
   if hasattr(config, 'heads'):
     config.heads.diffusion.eval.num_samples = num_diffusion_samples
+  if hasattr(config, 'return_embeddings'):
+    config.return_embeddings = return_embeddings
   return config
 
 
@@ -351,6 +361,18 @@ class ModelRunner:
         )
     )
 
+  def extract_embeddings(
+      self,
+      result: base_model.ModelResult,
+  ) -> dict[str, np.ndarray] | None:
+    """Extracts embeddings from model outputs."""
+    embeddings = {}
+    if 'single_embeddings' in result:
+      embeddings['single_embeddings'] = result['single_embeddings']
+    if 'pair_embeddings' in result:
+      embeddings['pair_embeddings'] = result['pair_embeddings']
+    return embeddings or None
+
 
 @dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
 class ResultsForSeed:
@@ -361,11 +383,13 @@ class ResultsForSeed:
     inference_results: The inference results, one per sample.
     full_fold_input: The fold input that must also include the results of
       running the data pipeline - MSA and templates.
+    embeddings: The final trunk single and pair embeddings, if requested.
   """
 
   seed: int
   inference_results: Sequence[base_model.InferenceResult]
   full_fold_input: folding_input.Input
+  embeddings: dict[str, np.ndarray] | None = None
 
 
 def predict_structure(
@@ -410,11 +434,15 @@ def predict_structure(
         f'Extracting output structures (one per sample) for seed {seed} took '
         f' {time.time() - extract_structures:.2f} seconds.'
     )
+
+    embeddings = model_runner.extract_embeddings(result)
+
     all_inference_results.append(
         ResultsForSeed(
             seed=seed,
             inference_results=inference_results,
             full_fold_input=fold_input,
+            embeddings=embeddings,
         )
     )
     print(
@@ -469,6 +497,13 @@ def write_outputs(
       if max_ranking_score is None or ranking_score > max_ranking_score:
         max_ranking_score = ranking_score
         max_ranking_result = result
+
+    if embeddings := results_for_seed.embeddings:
+      embeddings_dir = os.path.join(output_dir, f'seed-{seed}_embeddings')
+      os.makedirs(embeddings_dir, exist_ok=True)
+      post_processing.write_embeddings(
+          embeddings=embeddings, output_dir=embeddings_dir
+      )
 
   if max_ranking_result is not None:  # True iff ranking_scores non-empty.
     post_processing.write_output(
@@ -723,6 +758,7 @@ def main(_):
                 attention.Implementation, _FLASH_ATTENTION_IMPLEMENTATION.value
             ),
             num_diffusion_samples=_NUM_DIFFUSION_SAMPLES.value,
+            return_embeddings=_SAVE_EMBEDDINGS.value,
         ),
         device=devices[0],
         model_dir=pathlib.Path(MODEL_DIR.value),

@@ -111,3 +111,13 @@ def write_output(
   if terms_of_use is not None:
     with open(os.path.join(output_dir, 'TERMS_OF_USE.md'), 'wt') as f:
       f.write(terms_of_use)
+
+
+def write_embeddings(
+    embeddings: dict[str, np.ndarray],
+    output_dir: os.PathLike[str] | str,
+) -> None:
+  """Writes embeddings to a directory."""
+
+  with open(os.path.join(output_dir, 'embeddings.npz'), 'wb') as f:
+    np.savez_compressed(f, allow_pickle=False, **embeddings)
