@@ -199,6 +199,13 @@ _MAX_TEMPLATE_DATE = flags.DEFINE_string(
     'templates released after this date will be ignored.',
 )
 
+_CONFORMER_MAX_ITERATIONS = flags.DEFINE_integer(
+    'conformer_max_iterations',
+    None,  # Default to RDKit default parameters value.
+    'Optional override for maximum number of iterations to run for RDKit '
+    'conformer search.',
+)
+
 # JAX inference performance tuning.
 _JAX_COMPILATION_CACHE_DIR = flags.DEFINE_string(
     'jax_compilation_cache_dir',
@@ -365,6 +372,7 @@ def predict_structure(
     fold_input: folding_input.Input,
     model_runner: ModelRunner,
     buckets: Sequence[int] | None = None,
+    conformer_max_iterations: int | None = None,
 ) -> Sequence[ResultsForSeed]:
   """Runs the full inference pipeline to predict structures for each seed."""
 
@@ -372,7 +380,11 @@ def predict_structure(
   featurisation_start_time = time.time()
   ccd = chemical_components.cached_ccd(user_ccd=fold_input.user_ccd)
   featurised_examples = featurisation.featurise_input(
-      fold_input=fold_input, buckets=buckets, ccd=ccd, verbose=True
+      fold_input=fold_input,
+      buckets=buckets,
+      ccd=ccd,
+      verbose=True,
+      conformer_max_iterations=conformer_max_iterations,
   )
   print(
       f'Featurising data for seeds {fold_input.rng_seeds} took '
@@ -518,6 +530,7 @@ def process_fold_input(
     model_runner: ModelRunner | None,
     output_dir: os.PathLike[str] | str,
     buckets: Sequence[int] | None = None,
+    conformer_max_iterations: int | None = None,
 ) -> folding_input.Input | Sequence[ResultsForSeed]:
   """Runs data pipeline and/or inference on a single fold input.
 
@@ -532,6 +545,8 @@ def process_fold_input(
       number of tokens. If not None, must be a sequence of at least one integer,
       in strictly increasing order. Will raise an error if the number of tokens
       is more than the largest bucket size.
+    conformer_max_iterations: Optional override for maximum number of iterations
+      to run for RDKit conformer search.
 
   Returns:
     The processed fold input, or the inference results for each seed.
@@ -581,6 +596,7 @@ def process_fold_input(
         fold_input=fold_input,
         model_runner=model_runner,
         buckets=buckets,
+        conformer_max_iterations=conformer_max_iterations,
     )
     print(
         f'Writing outputs for {fold_input.name} for seed(s)'
@@ -725,6 +741,7 @@ def main(_):
         model_runner=model_runner,
         output_dir=os.path.join(_OUTPUT_DIR.value, fold_input.sanitised_name()),
         buckets=tuple(int(bucket) for bucket in _BUCKETS.value),
+        conformer_max_iterations=_CONFORMER_MAX_ITERATIONS.value,
     )
     num_fold_inputs += 1
 

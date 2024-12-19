@@ -370,6 +370,15 @@ smiles = r'CCC[C@@H](O)CC\C=C\C=C\C#CC#C\C=C\CO'  # Replace with your SMILES.
 print(json.dumps(smiles))
 ```
 
+#### Reference structure construction with SMILES
+
+For some ligands and some random seeds, RDKit might fail to generate a
+conformer, indicated by the `Failed to construct RDKit reference structure`
+error message. In this case, you can either provide a reference structure for
+the ligand using the [user-provided CCD Format](#user-provided-ccd-format), or
+try increasing the number of RDKit conformer iterations using the
+`--conformer_max_iterations=...` flag.
+
 ### Ions
 
 Ions are treated as ligands, e.g. a magnesium ion would simply be a ligand with
