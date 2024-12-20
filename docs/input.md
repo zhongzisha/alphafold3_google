@@ -537,7 +537,7 @@ The fields specify the following:
 *   `mmcifPath: str`: An optional path to a file that contains the mmCIF with
     the structural template instead of providing it inline using the `mmcifPath`
     field. The path can be either absolute, or relative to the input JSON path.
-    The file must be in the A3M format, and could be either plain text, or
+    The file must be in the mmCIF format, and could be either plain text, or
     compressed using gzip, xz, or zstd.
 *   `queryIndices: list[int]`: O-based indices in the query sequence, defining
     the mapping from query residues to template residues.
