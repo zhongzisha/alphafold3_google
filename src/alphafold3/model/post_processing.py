@@ -17,7 +17,7 @@ import os
 from alphafold3 import version
 from alphafold3.model import confidence_types
 from alphafold3.model import mmcif_metadata
-from alphafold3.model.components import base_model
+from alphafold3.model.diffusion import model
 import numpy as np
 
 
@@ -45,7 +45,7 @@ class ProcessedInferenceResult:
 
 
 def post_process_inference_result(
-    inference_result: base_model.InferenceResult,
+    inference_result: model.InferenceResult,
 ) -> ProcessedInferenceResult:
   """Returns cif, confidence_1d_json, confidence_2d_json, mean_confidence_1d, and ranking confidence."""
 
@@ -87,7 +87,7 @@ def post_process_inference_result(
 
 
 def write_output(
-    inference_result: base_model.InferenceResult,
+    inference_result: model.InferenceResult,
     output_dir: os.PathLike[str] | str,
     terms_of_use: str | None = None,
     name: str | None = None,

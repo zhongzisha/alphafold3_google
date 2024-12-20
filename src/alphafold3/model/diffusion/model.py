@@ -10,9 +10,11 @@
 
 """Diffusion model."""
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 import concurrent
+import dataclasses
 import functools
+from typing import Any, TypeAlias
 
 from absl import logging
 from alphafold3 import structure
@@ -22,7 +24,6 @@ from alphafold3.model import feat_batch
 from alphafold3.model import features
 from alphafold3.model import model_config
 from alphafold3.model.atom_layout import atom_layout
-from alphafold3.model.components import base_model
 from alphafold3.model.components import haiku_modules as hm
 from alphafold3.model.components import mapping
 from alphafold3.model.components import utils
@@ -40,8 +41,34 @@ import jax.numpy as jnp
 import numpy as np
 
 
+ModelResult: TypeAlias = Mapping[str, Any]
+_ScalarNumberOrArray: TypeAlias = Mapping[str, float | int | np.ndarray]
+
+
+@dataclasses.dataclass(frozen=True)
+class InferenceResult:
+  """Postprocessed model result.
+
+  Attributes:
+    predicted_structure: Predicted protein structure.
+    numerical_data: Useful numerical data (scalars or arrays) to be saved at
+      inference time.
+    metadata: Smaller numerical data (usually scalar) to be saved as inference
+      metadata.
+    debug_outputs: Additional dict for debugging, e.g. raw outputs of a model
+      forward pass.
+    model_id: Model identifier.
+  """
+
+  predicted_structure: structure.Structure = dataclasses.field()
+  numerical_data: _ScalarNumberOrArray = dataclasses.field(default_factory=dict)
+  metadata: _ScalarNumberOrArray = dataclasses.field(default_factory=dict)
+  debug_outputs: Mapping[str, Any] = dataclasses.field(default_factory=dict)
+  model_id: bytes = b''
+
+
 def get_predicted_structure(
-    result: base_model.ModelResult, batch: feat_batch.Batch
+    result: ModelResult, batch: feat_batch.Batch
 ) -> structure.Structure:
   """Creates the predicted structure and ion preditions.
 
@@ -145,7 +172,7 @@ def create_target_feat_embedding(
 
 
 def _compute_ptm(
-    result: base_model.ModelResult,
+    result: ModelResult,
     num_tokens: int,
     asym_id: np.ndarray,
     pae_single_mask: np.ndarray,
@@ -234,7 +261,7 @@ class Diffuser(hk.Module):
 
   def __call__(
       self, batch: features.BatchDict, key: jax.Array | None = None
-  ) -> base_model.ModelResult:
+  ) -> ModelResult:
     if key is None:
       key = hk.next_rng_key()
 
@@ -317,9 +344,9 @@ class Diffuser(hk.Module):
   def get_inference_result(
       cls,
       batch: features.BatchDict,
-      result: base_model.ModelResult,
+      result: ModelResult,
       target_name: str = '',
-  ) -> Iterable[base_model.InferenceResult]:
+  ) -> Iterable[InferenceResult]:
     """Get the predicted structure, scalars, and arrays for inference.
 
     This function also computes any inference-time quantities, which are not a
@@ -449,7 +476,7 @@ class Diffuser(hk.Module):
           fraction_disordered_=fraction_disordered[idx],
           has_clash_=has_clash[idx],
       )
-      yield base_model.InferenceResult(
+      yield InferenceResult(
           predicted_structure=pred_structure,
           numerical_data={
               'full_pde': result['full_pde'][idx, :num_tokens, :num_tokens],
@@ -482,6 +509,7 @@ class Diffuser(hk.Module):
               'token_res_ids': res_ids,
           },
           model_id=result['__identifier__'],
+          debug_outputs={},
       )
 
 

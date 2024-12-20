@@ -19,7 +19,7 @@ if received directly from Google. Use is subject to terms of use available at
 https://github.com/google-deepmind/alphafold3/blob/main/WEIGHTS_TERMS_OF_USE.md
 """
 
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Sequence
 import csv
 import dataclasses
 import datetime
@@ -32,11 +32,10 @@ import string
 import textwrap
 import time
 import typing
-from typing import Protocol, Self, TypeVar, overload
+from typing import overload
 
 from absl import app
 from absl import flags
-from alphafold3.common import base_config
 from alphafold3.common import folding_input
 from alphafold3.common import resources
 from alphafold3.constants import chemical_components
@@ -47,9 +46,8 @@ from alphafold3.jax.attention import attention
 from alphafold3.model import features
 from alphafold3.model import params
 from alphafold3.model import post_processing
-from alphafold3.model.components import base_model
 from alphafold3.model.components import utils
-from alphafold3.model.diffusion import model as diffusion_model
+from alphafold3.model.diffusion import model
 import haiku as hk
 import jax
 from jax import numpy as jnp
@@ -249,45 +247,19 @@ _SAVE_EMBEDDINGS = flags.DEFINE_bool(
 )
 
 
-class ConfigurableModel(Protocol):
-  """A model with a nested config class."""
-
-  class Config(base_config.BaseConfig):
-    ...
-
-  def __call__(self, config: Config) -> Self:
-    ...
-
-  @classmethod
-  def get_inference_result(
-      cls: Self,
-      batch: features.BatchDict,
-      result: base_model.ModelResult,
-      target_name: str = '',
-  ) -> Iterable[base_model.InferenceResult]:
-    ...
-
-
-ModelT = TypeVar('ModelT', bound=ConfigurableModel)
-
-
 def make_model_config(
     *,
-    model_class: type[ModelT] = diffusion_model.Diffuser,
     flash_attention_implementation: attention.Implementation = 'triton',
     num_diffusion_samples: int = 5,
     return_embeddings: bool = False,
-):
+) -> model.Diffuser.Config:
   """Returns a model config with some defaults overridden."""
-  config = model_class.Config()
-  if hasattr(config, 'global_config'):
-    config.global_config.flash_attention_implementation = (
-        flash_attention_implementation
-    )
-  if hasattr(config, 'heads'):
-    config.heads.diffusion.eval.num_samples = num_diffusion_samples
-  if hasattr(config, 'return_embeddings'):
-    config.return_embeddings = return_embeddings
+  config = model.Diffuser.Config()
+  config.global_config.flash_attention_implementation = (
+      flash_attention_implementation
+  )
+  config.heads.diffusion.eval.num_samples = num_diffusion_samples
+  config.return_embeddings = return_embeddings
   return config
 
 
@@ -296,12 +268,10 @@ class ModelRunner:
 
   def __init__(
       self,
-      model_class: ConfigurableModel,
-      config: base_config.BaseConfig,
+      config: model.Diffuser.Config,
       device: jax.Device,
       model_dir: pathlib.Path,
   ):
-    self._model_class = model_class
     self._model_config = config
     self._device = device
     self._model_dir = model_dir
@@ -314,15 +284,12 @@ class ModelRunner:
   @functools.cached_property
   def _model(
       self,
-  ) -> Callable[[jnp.ndarray, features.BatchDict], base_model.ModelResult]:
+  ) -> Callable[[jnp.ndarray, features.BatchDict], model.ModelResult]:
     """Loads model parameters and returns a jitted model forward pass."""
-    assert isinstance(self._model_config, self._model_class.Config)
 
     @hk.transform
     def forward_fn(batch):
-      result = self._model_class(self._model_config)(batch)
-      result['__identifier__'] = self.model_params['__meta__']['__identifier__']
-      return result
+      return model.Diffuser(self._model_config)(batch)
 
     return functools.partial(
         jax.jit(forward_fn.apply, device=self._device), self.model_params
@@ -330,7 +297,7 @@ class ModelRunner:
 
   def run_inference(
       self, featurised_example: features.BatchDict, rng_key: jnp.ndarray
-  ) -> base_model.ModelResult:
+  ) -> model.ModelResult:
     """Computes a forward pass of the model on a featurised example."""
     featurised_example = jax.device_put(
         jax.tree_util.tree_map(
@@ -345,25 +312,27 @@ class ModelRunner:
         lambda x: x.astype(jnp.float32) if x.dtype == jnp.bfloat16 else x,
         result,
     )
-    result['__identifier__'] = result['__identifier__'].tobytes()
+    result = dict(result)
+    identifier = self.model_params['__meta__']['__identifier__'].tobytes()
+    result['__identifier__'] = identifier
     return result
 
   def extract_structures(
       self,
       batch: features.BatchDict,
-      result: base_model.ModelResult,
+      result: model.ModelResult,
       target_name: str,
-  ) -> list[base_model.InferenceResult]:
+  ) -> list[model.InferenceResult]:
     """Generates structures from model outputs."""
     return list(
-        self._model_class.get_inference_result(
+        model.Diffuser.get_inference_result(
             batch=batch, result=result, target_name=target_name
         )
     )
 
   def extract_embeddings(
       self,
-      result: base_model.ModelResult,
+      result: model.ModelResult,
   ) -> dict[str, np.ndarray] | None:
     """Extracts embeddings from model outputs."""
     embeddings = {}
@@ -387,7 +356,7 @@ class ResultsForSeed:
   """
 
   seed: int
-  inference_results: Sequence[base_model.InferenceResult]
+  inference_results: Sequence[model.InferenceResult]
   full_fold_input: folding_input.Input
   embeddings: dict[str, np.ndarray] | None = None
 
@@ -752,7 +721,6 @@ def main(_):
 
     print('Building model from scratch...')
     model_runner = ModelRunner(
-        model_class=diffusion_model.Diffuser,
         config=make_model_config(
             flash_attention_implementation=typing.cast(
                 attention.Implementation, _FLASH_ATTENTION_IMPLEMENTATION.value
