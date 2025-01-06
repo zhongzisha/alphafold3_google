@@ -16,7 +16,7 @@ import json
 from typing import Any, Self
 
 from absl import logging
-from alphafold3.model.diffusion import model
+from alphafold3.model.network import alphafold3
 import jax
 import numpy as np
 
@@ -136,7 +136,7 @@ class AtomConfidence:
 
   @classmethod
   def from_inference_result(
-      cls, inference_result: model.InferenceResult
+      cls, inference_result: alphafold3.InferenceResult
   ) -> Self:
     """Instantiates an AtomConfidence from a structure.
 
@@ -210,7 +210,7 @@ class StructureConfidenceSummary:
 
   @classmethod
   def from_inference_result(
-      cls, inference_result: model.InferenceResult
+      cls, inference_result: alphafold3.InferenceResult
   ) -> Self:
     """Returns a new instance based on a given inference result."""
     return cls(
@@ -258,7 +258,7 @@ class StructureConfidenceFull:
 
   @classmethod
   def from_inference_result(
-      cls, inference_result: model.InferenceResult
+      cls, inference_result: alphafold3.InferenceResult
   ) -> Self:
     """Returns a new instance based on a given inference result."""
 

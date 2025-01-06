@@ -8,7 +8,7 @@
 # if received directly from Google. Use is subject to terms of use available at
 # https://github.com/google-deepmind/alphafold3/blob/main/WEIGHTS_TERMS_OF_USE.md
 
-"""Diffusion model."""
+"""AlphaFold3 model."""
 
 from collections.abc import Iterable, Mapping
 import concurrent
@@ -27,13 +27,13 @@ from alphafold3.model.atom_layout import atom_layout
 from alphafold3.model.components import haiku_modules as hm
 from alphafold3.model.components import mapping
 from alphafold3.model.components import utils
-from alphafold3.model.diffusion import atom_cross_attention
-from alphafold3.model.diffusion import confidence_head
-from alphafold3.model.diffusion import diffusion_head
-from alphafold3.model.diffusion import distogram_head
-from alphafold3.model.diffusion import featurization
-from alphafold3.model.diffusion import modules
-from alphafold3.model.diffusion import template_modules
+from alphafold3.model.network import atom_cross_attention
+from alphafold3.model.network import confidence_head
+from alphafold3.model.network import diffusion_head
+from alphafold3.model.network import distogram_head
+from alphafold3.model.network import featurization
+from alphafold3.model.network import modules
+from alphafold3.model.network import template_modules
 from alphafold3.structure import mmcif
 import haiku as hk
 import jax
@@ -213,8 +213,8 @@ def _compute_chain_pair_iptm(
   )
 
 
-class Diffuser(hk.Module):
-  """Full Diffusion network."""
+class AlphaFold3(hk.Module):
+  """Full AlphaFold3 network."""
 
   class HeadsConfig(base_config.BaseConfig):
     diffusion: diffusion_head.DiffusionHead.Config = base_config.autocreate()
@@ -224,7 +224,7 @@ class Diffuser(hk.Module):
   class Config(base_config.BaseConfig):
     evoformer: 'Evoformer.Config' = base_config.autocreate()
     global_config: model_config.GlobalConfig = base_config.autocreate()
-    heads: 'Diffuser.HeadsConfig' = base_config.autocreate()
+    heads: 'AlphaFold3.HeadsConfig' = base_config.autocreate()
     num_recycles: int = 10
     return_embeddings: bool = False
 
