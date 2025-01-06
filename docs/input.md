@@ -943,9 +943,8 @@ certain fields and the sequences are not biologically meaningful.
     }
   ],
   "bondedAtomPairs": [
-    [["A", 1, "CA"], ["B", 1, "CA"]],
     [["A", 1, "CA"], ["G", 1, "CHA"]],
-    [["J", 1, "O6"], ["J", 2, "C1"]]
+    [["I", 1, "O6"], ["I", 2, "C1"]]
   ],
   "userCCD": ...,
   "dialect": "alphafold3",
