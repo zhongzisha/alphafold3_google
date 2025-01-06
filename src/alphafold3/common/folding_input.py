@@ -770,7 +770,6 @@ def _validate_user_ccd_keys(keys: Sequence[str]) -> None:
       '_chem_comp_atom.atom_id',
       '_chem_comp_atom.type_symbol',
       '_chem_comp_atom.charge',
-      '_chem_comp_atom.pdbx_leaving_atom_flag',
       '_chem_comp_atom.pdbx_model_Cartn_x_ideal',
       '_chem_comp_atom.pdbx_model_Cartn_y_ideal',
       '_chem_comp_atom.pdbx_model_Cartn_z_ideal',
