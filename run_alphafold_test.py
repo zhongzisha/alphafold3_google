@@ -288,9 +288,13 @@ class InferenceTest(test_utils.StructureTestCase):
             'TERMS_OF_USE.md',
         ],
     )
+    embeddings_dir = os.path.join(output_dir, 'seed-1234_embeddings')
+    self.assertSameElements(os.listdir(embeddings_dir), ['embeddings.npz'])
+
+    with open(os.path.join(embeddings_dir, 'embeddings.npz'), 'rb') as f:
+      embeddings = dict(np.load(f))
     self.assertSameElements(
-        os.listdir(os.path.join(output_dir, 'seed-1234_embeddings')),
-        ['embeddings.npz'],
+        embeddings.keys(), ['single_embeddings', 'pair_embeddings']
     )
 
     with open(os.path.join(output_dir, expected_data_json_filename), 'rt') as f:

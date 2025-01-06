@@ -120,4 +120,4 @@ def write_embeddings(
   """Writes embeddings to a directory."""
 
   with open(os.path.join(output_dir, 'embeddings.npz'), 'wb') as f:
-    np.savez_compressed(f, allow_pickle=False, **embeddings)
+    np.savez_compressed(f, **embeddings)
