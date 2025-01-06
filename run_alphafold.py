@@ -44,10 +44,10 @@ from alphafold3.data import featurisation
 from alphafold3.data import pipeline
 from alphafold3.jax.attention import attention
 from alphafold3.model import features
+from alphafold3.model import model
 from alphafold3.model import params
 from alphafold3.model import post_processing
 from alphafold3.model.components import utils
-from alphafold3.model.network import alphafold3
 import haiku as hk
 import jax
 from jax import numpy as jnp
@@ -252,9 +252,9 @@ def make_model_config(
     flash_attention_implementation: attention.Implementation = 'triton',
     num_diffusion_samples: int = 5,
     return_embeddings: bool = False,
-) -> alphafold3.AlphaFold3.Config:
+) -> model.Model.Config:
   """Returns a model config with some defaults overridden."""
-  config = alphafold3.AlphaFold3.Config()
+  config = model.Model.Config()
   config.global_config.flash_attention_implementation = (
       flash_attention_implementation
   )
@@ -268,7 +268,7 @@ class ModelRunner:
 
   def __init__(
       self,
-      config: alphafold3.AlphaFold3.Config,
+      config: model.Model.Config,
       device: jax.Device,
       model_dir: pathlib.Path,
   ):
@@ -284,12 +284,12 @@ class ModelRunner:
   @functools.cached_property
   def _model(
       self,
-  ) -> Callable[[jnp.ndarray, features.BatchDict], alphafold3.ModelResult]:
+  ) -> Callable[[jnp.ndarray, features.BatchDict], model.ModelResult]:
     """Loads model parameters and returns a jitted model forward pass."""
 
     @hk.transform
     def forward_fn(batch):
-      return alphafold3.AlphaFold3(self._model_config)(batch)
+      return model.Model(self._model_config)(batch)
 
     return functools.partial(
         jax.jit(forward_fn.apply, device=self._device), self.model_params
@@ -297,7 +297,7 @@ class ModelRunner:
 
   def run_inference(
       self, featurised_example: features.BatchDict, rng_key: jnp.ndarray
-  ) -> alphafold3.ModelResult:
+  ) -> model.ModelResult:
     """Computes a forward pass of the model on a featurised example."""
     featurised_example = jax.device_put(
         jax.tree_util.tree_map(
@@ -320,19 +320,19 @@ class ModelRunner:
   def extract_structures(
       self,
       batch: features.BatchDict,
-      result: alphafold3.ModelResult,
+      result: model.ModelResult,
       target_name: str,
-  ) -> list[alphafold3.InferenceResult]:
+  ) -> list[model.InferenceResult]:
     """Generates structures from model outputs."""
     return list(
-        alphafold3.AlphaFold3.get_inference_result(
+        model.Model.get_inference_result(
             batch=batch, result=result, target_name=target_name
         )
     )
 
   def extract_embeddings(
       self,
-      result: alphafold3.ModelResult,
+      result: model.ModelResult,
   ) -> dict[str, np.ndarray] | None:
     """Extracts embeddings from model outputs."""
     embeddings = {}
@@ -356,7 +356,7 @@ class ResultsForSeed:
   """
 
   seed: int
-  inference_results: Sequence[alphafold3.InferenceResult]
+  inference_results: Sequence[model.InferenceResult]
   full_fold_input: folding_input.Input
   embeddings: dict[str, np.ndarray] | None = None
 
