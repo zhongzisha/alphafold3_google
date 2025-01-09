@@ -210,6 +210,13 @@ _JAX_COMPILATION_CACHE_DIR = flags.DEFINE_string(
     None,
     'Path to a directory for the JAX compilation cache.',
 )
+_GPU_DEVICE = flags.DEFINE_integer(
+    'gpu_device',
+    0,
+    'Optional override for the GPU device to use for inference. Defaults to the'
+    ' 1st GPU on the system. Useful on multi-GPU systems to pin each run to a'
+    ' specific GPU.',
+)
 _BUCKETS = flags.DEFINE_list(
     'buckets',
     # pyformat: disable
@@ -658,7 +665,9 @@ def main(_):
     # Fail early on incompatible devices, but only if we're running inference.
     gpu_devices = jax.local_devices(backend='gpu')
     if gpu_devices:
-      compute_capability = float(gpu_devices[0].compute_capability)
+      compute_capability = float(
+          gpu_devices[_GPU_DEVICE.value].compute_capability
+      )
       if compute_capability < 6.0:
         raise ValueError(
             'AlphaFold 3 requires at least GPU compute capability 6.0 (see'
@@ -717,7 +726,10 @@ def main(_):
 
   if _RUN_INFERENCE.value:
     devices = jax.local_devices(backend='gpu')
-    print(f'Found local devices: {devices}')
+    print(
+        f'Found local devices: {devices}, using device {_GPU_DEVICE.value}:'
+        f' {devices[_GPU_DEVICE.value]}'
+    )
 
     print('Building model from scratch...')
     model_runner = ModelRunner(
@@ -728,7 +740,7 @@ def main(_):
             num_diffusion_samples=_NUM_DIFFUSION_SAMPLES.value,
             return_embeddings=_SAVE_EMBEDDINGS.value,
         ),
-        device=devices[0],
+        device=devices[_GPU_DEVICE.value],
         model_dir=pathlib.Path(MODEL_DIR.value),
     )
   else:
